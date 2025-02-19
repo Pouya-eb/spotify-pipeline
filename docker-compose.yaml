@@ -1,14 +1,6 @@
 # version: '3.8'
 
 services:
-  # zookeeper:
-  #   image: confluentinc/cp-zookeeper:latest
-  #   container_name: zookeeper
-  #   environment:
-  #     ZOOKEEPER_CLIENT_PORT: 2181
-  #     ZOOKEEPER_TICK_TIME: 2000
-  #   networks:
-  #     - kafka-net
 
 
   zookeeper:
@@ -33,15 +25,16 @@ services:
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       # - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      # - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
     ports:
       - "9092:9092"
     volumes:
       - ./topics-init.sh:/topics-init.sh
     # user: root
-    entrypoint: ["/bin/bash", "-c", "chmod +x /topics-init.sh && /etc/confluent/docker/run && sleep 50 && bash /topics-init.sh"]
+    command: ["/bin/bash", "-c", "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null"]   
     networks:
       - kafka-net
+
 
   redpanda-console:
     image: docker.redpanda.com/vectorized/console:latest
@@ -54,35 +47,6 @@ services:
       - kafka
     networks:
       - kafka-net
-
-  # kafkaui:
-  #   image: provectuslabs/kafka-ui:latest
-  #   container_name: kafka-ui
-  #   ports:
-  #     - "8081:8080"
-  #   environment:
-  #     KAFKA_CLUSTERS_0_NAME: "local"
-  #     KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: "kafka:9092"
-  #   depends_on:
-  #     - kafka
-  #   networks:
-  #     - kafka-net
-
-  # akhq:
-  #   image: tchiotludo/akhq
-  #   container_name: akhq
-  #   ports:
-  #     - "8082:8080"
-  #   environment:
-  #     AKHQ_CONFIGURATION: |
-  #       akhq:
-  #         connections:
-  #           local:
-  #             bootstrap.servers: "kafka:9092"
-  #   depends_on:
-  #     - kafka
-  #   networks:
-  #     - kafka-net
 
 networks:
   kafka-net:
