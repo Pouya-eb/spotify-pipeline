@@ -1,10 +1,10 @@
 # version: '3.8'
 
 services:
-  evetsim:
+  eventsim:
     image: khoramism/event-generator-eventsim:1.2
     environment:
-      - BOOTSTRAP_SERVERS=broker:29092
+      - BOOTSTRAP_SERVERS=broker:9092
       - SECURITY_PROTOCOL=PLAINTEXT
       - SASL_JAAS_CONFIG=''
       - SASL_MECHANISM=''
@@ -42,15 +42,15 @@ services:
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
     ports:
       - "9092:9092"
-    volumes:
-      - ./topics-init.sh:/topics-init.sh
+    # volumes:
+    # - ./topics-init.sh:/topics-init.sh
     # user: root
-    command:
-      [
-        "/bin/bash",
-        "-c",
-        "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null",
-      ]
+    # command:
+    #   [
+    #     "/bin/bash",
+    #     "-c",
+    #     "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null",
+    #   ]
     # networks:
     #   - kafka-net
 
