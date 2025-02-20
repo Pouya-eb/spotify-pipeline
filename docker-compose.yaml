@@ -1,7 +1,21 @@
 # version: '3.8'
 
 services:
-
+  evetsim:
+    image: khoramism/event-generator-eventsim:1.2
+    environment:
+      - BOOTSTRAP_SERVERS=broker:29092
+      - SECURITY_PROTOCOL=PLAINTEXT
+      - SASL_JAAS_CONFIG=''
+      - SASL_MECHANISM=''
+      - CLIENT_DNS_LOOKUP=use_all_dns_ips
+      - SESSION_TIMEOUT_MS=45000
+      - KEY_SERIALIZER=org.apache.kafka.common.serialization.ByteArraySerializer
+      - VALUE_SERIALIZER=org.apache.kafka.common.serialization.ByteArraySerializer
+      - ACKS=all
+    command: ./bin/eventsim -c configs/Guitar-config.json --continuous --from 200 --nusers 2000 -k 1
+    depends_on:
+      - kafka
 
   zookeeper:
     image: bitnami/zookeeper:latest
@@ -10,8 +24,8 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - "2181:2181"
-    networks:
-      - kafka-net
+    # networks:
+    #   - kafka-net
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -31,10 +45,14 @@ services:
     volumes:
       - ./topics-init.sh:/topics-init.sh
     # user: root
-    command: ["/bin/bash", "-c", "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null"]   
-    networks:
-      - kafka-net
-
+    command:
+      [
+        "/bin/bash",
+        "-c",
+        "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null",
+      ]
+    # networks:
+    #   - kafka-net
 
   redpanda-console:
     image: docker.redpanda.com/vectorized/console:latest
@@ -45,9 +63,95 @@ services:
       KAFKA_BROKERS: "kafka:9092"
     depends_on:
       - kafka
-    networks:
-      - kafka-net
+    # networks:
+    #   - kafka-net
 
-networks:
-  kafka-net:
-    driver: bridge
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    ports:
+      - 9870:9870
+      # - 9000:9000
+    volumes:
+      - ./hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop.env
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    restart: always
+    volumes:
+      - ./hadoop_datanode:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+    env_file:
+      - ./hadoop.env
+
+  nodemanager1:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    env_file:
+      - ./hadoop.env
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: historyserver
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    volumes:
+      - ./hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop.env
+
+  spark-master:
+    build: .
+    container_name: spark-master
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./apps:/opt/spark-apps
+      - ./data:/opt/spark-data
+    environment:
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_WORKLOAD=master
+      - HADOOP_CONF_DIR=/etc/hadoop
+      - HADOOP_HOME=/hadoop
+
+  spark-worker:
+    build: .
+    container_name: spark-worker
+    ports:
+      - "28080:8080"
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_DRIVER_MEMORY=1G
+      - SPARK_EXECUTOR_MEMORY=1G
+      - SPARK_WORKLOAD=worker
+      # - SPARK_LOCAL_IP=spark-worker
+    volumes:
+      - ./apps:/opt/spark-apps
+      - ./data:/opt/spark-data
+    depends_on:
+      - spark-master
+# networks:
+#   kafka-net:
+#     driver: bridge
