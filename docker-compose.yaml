@@ -45,12 +45,7 @@ services:
     # volumes:
     # - ./topics-init.sh:/topics-init.sh
     # user: root
-    # command:
-    #   [
-    #     "/bin/bash",
-    #     "-c",
-    #     "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null",
-    #   ]
+    # entrypoint: ["/bin/bash", "-c", "/etc/confluent/docker/run & sleep 20 && chmod +x /topics-init.sh && bash /topics-init.sh && tail -f /dev/null"]
     # networks:
     #   - kafka-net
 
