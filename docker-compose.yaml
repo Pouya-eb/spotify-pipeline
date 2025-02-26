@@ -4,7 +4,7 @@ services:
   eventsim:
     image: khoramism/event-generator-eventsim:1.2
     environment:
-      - BOOTSTRAP_SERVERS=broker:9092
+      - BOOTSTRAP_SERVERS=kafka:9092
       - SECURITY_PROTOCOL=PLAINTEXT
       - SASL_JAAS_CONFIG=''
       - SASL_MECHANISM=''
